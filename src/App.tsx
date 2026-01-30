@@ -3,7 +3,17 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { PublicLayout } from "@/layouts/PublicLayout";
+import { DashboardLayout } from "@/layouts/DashboardLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Home from "./pages/Home";
+import Booking from "./pages/Booking";
+import Login from "./pages/Login";
+import DashboardHome from "./pages/dashboard/DashboardHome";
+import CalendarPage from "./pages/dashboard/CalendarPage";
+import AppointmentsPage from "./pages/dashboard/AppointmentsPage";
+import PatientsPage from "./pages/dashboard/PatientsPage";
+import SchedulesPage from "./pages/dashboard/SchedulesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -15,8 +25,25 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Public Routes */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Home />} />
+          </Route>
+          <Route path="/agendar" element={<Booking />} />
+          <Route path="/login" element={<Login />} />
+
+          {/* Dashboard Routes - Protected */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={<DashboardHome />} />
+              <Route path="calendario" element={<CalendarPage />} />
+              <Route path="citas" element={<AppointmentsPage />} />
+              <Route path="pacientes" element={<PatientsPage />} />
+              <Route path="horarios" element={<SchedulesPage />} />
+            </Route>
+          </Route>
+
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
