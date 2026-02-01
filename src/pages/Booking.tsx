@@ -8,13 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
-import { Logo } from "@/components/ui/Logo";
+import { useAvailableSlots } from "@/hooks/useAvailableSlots";
 import { Header } from "@/components/public/Header";
 import { Footer } from "@/components/public/Footer";
-import { format, addDays, parse, isAfter, isBefore, setHours, setMinutes } from "date-fns";
+import { format, addDays, isBefore, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, FileText, Video, Building2, CheckCircle2, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
-import type { Doctor, Office, Schedule, AppointmentType } from "@/lib/types";
+import type { Doctor, Office, AppointmentType } from "@/lib/types";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -60,24 +60,12 @@ export default function Booking() {
     },
   });
 
-  // Fetch schedules for selected doctor
-  const { data: schedules = [] } = useQuery({
-    queryKey: ["schedules", selectedDoctor?.id],
-    queryFn: async () => {
-      if (!selectedDoctor) return [];
-      const { data, error } = await supabase
-        .from("schedules")
-        .select("*")
-        .eq("doctor_id", selectedDoctor.id)
-        .eq("is_active", true);
-      if (error) throw error;
-      return data as Schedule[];
-    },
-    enabled: !!selectedDoctor,
+  // Use the real availability hook
+  const { data: availableSlots = [], isLoading: loadingSlots } = useAvailableSlots({
+    doctorId: selectedDoctor?.id,
+    date: selectedDate,
+    duration,
   });
-
-  // Generate time slots for selected date
-  const timeSlots = generateTimeSlots(schedules, selectedDate);
 
   const handleSubmit = async () => {
     if (!selectedDoctor || !selectedDate || !selectedTime) return;
@@ -344,13 +332,18 @@ export default function Booking() {
                     {selectedDate && (
                       <div>
                         <Label className="mb-3 block">Horarios disponibles</Label>
-                        {timeSlots.length === 0 ? (
+                        {loadingSlots ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            <span className="ml-2 text-sm text-muted-foreground">Cargando horarios...</span>
+                          </div>
+                        ) : availableSlots.length === 0 ? (
                           <p className="text-sm text-muted-foreground py-4">
-                            No hay horarios disponibles para esta fecha.
+                            No hay horarios disponibles para esta fecha. Por favor, selecciona otra fecha.
                           </p>
                         ) : (
                           <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                            {timeSlots.map((time) => (
+                            {availableSlots.map((time) => (
                               <button
                                 key={time}
                                 onClick={() => setSelectedTime(time)}
@@ -585,28 +578,4 @@ export default function Booking() {
   );
 }
 
-function generateTimeSlots(schedules: Schedule[], selectedDate?: Date): string[] {
-  if (!selectedDate || schedules.length === 0) return [];
-  
-  const dayOfWeek = selectedDate.getDay();
-  const daySchedule = schedules.find((s) => s.day_of_week === dayOfWeek);
-  
-  if (!daySchedule) return [];
-
-  const slots: string[] = [];
-  const [startH, startM] = daySchedule.start_time.split(":").map(Number);
-  const [endH, endM] = daySchedule.end_time.split(":").map(Number);
-  
-  let currentTime = new Date();
-  currentTime.setHours(startH, startM, 0, 0);
-  
-  const endTime = new Date();
-  endTime.setHours(endH, endM, 0, 0);
-
-  while (currentTime < endTime) {
-    slots.push(format(currentTime, "HH:mm"));
-    currentTime.setMinutes(currentTime.getMinutes() + (daySchedule.slot_duration || 30));
-  }
-
-  return slots;
-}
+// Time slot generation is now handled by the useAvailableSlots hook

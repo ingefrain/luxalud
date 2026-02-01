@@ -14,8 +14,7 @@ import {
   ChevronDown,
   LayoutDashboard,
   CalendarPlus,
-  History,
-  Building2
+  DollarSign,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,6 +31,8 @@ const navItems = [
   { href: "/dashboard/citas", label: "Citas", icon: CalendarPlus },
   { href: "/dashboard/pacientes", label: "Pacientes", icon: Users },
   { href: "/dashboard/horarios", label: "Horarios", icon: Clock },
+  { href: "/dashboard/ingresos", label: "Ingresos", icon: DollarSign },
+  { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
 ];
 
 export function DashboardLayout() {
