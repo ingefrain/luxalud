@@ -13,7 +13,10 @@ import DashboardHome from "./pages/dashboard/DashboardHome";
 import CalendarPage from "./pages/dashboard/CalendarPage";
 import AppointmentsPage from "./pages/dashboard/AppointmentsPage";
 import PatientsPage from "./pages/dashboard/PatientsPage";
+import PatientDetailPage from "./pages/dashboard/PatientDetailPage";
 import SchedulesPage from "./pages/dashboard/SchedulesPage";
+import PaymentsPage from "./pages/dashboard/PaymentsPage";
+import SettingsPage from "./pages/dashboard/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,7 +42,10 @@ const App = () => (
               <Route path="calendario" element={<CalendarPage />} />
               <Route path="citas" element={<AppointmentsPage />} />
               <Route path="pacientes" element={<PatientsPage />} />
+              <Route path="pacientes/:id" element={<PatientDetailPage />} />
               <Route path="horarios" element={<SchedulesPage />} />
+              <Route path="ingresos" element={<PaymentsPage />} />
+              <Route path="configuracion" element={<SettingsPage />} />
             </Route>
           </Route>
 

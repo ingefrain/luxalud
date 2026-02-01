@@ -52,6 +52,7 @@ export interface Appointment {
   id: string;
   doctor_id: string;
   office_id?: string;
+  patient_id?: string;
   patient_name: string;
   patient_email: string;
   patient_phone: string;
@@ -69,6 +70,7 @@ export interface Appointment {
   updated_at: string;
   doctor?: Doctor;
   office?: Office;
+  patient?: Patient;
 }
 
 export type AppRole = 'medico' | 'asistente';
@@ -108,4 +110,50 @@ export interface BookingFormData {
   start_time: string;
   duration: number;
   type: AppointmentType;
+}
+
+// Patient types
+export interface Patient {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  date_of_birth?: string;
+  gender?: string;
+  address?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PatientFile {
+  id: string;
+  patient_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size?: number;
+  description?: string;
+  uploaded_by?: string;
+  created_at: string;
+}
+
+// Payment types
+export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia' | 'otro';
+
+export interface Payment {
+  id: string;
+  patient_id: string;
+  appointment_id?: string;
+  amount: number;
+  payment_method: PaymentMethod;
+  payment_date: string;
+  reference?: string;
+  receipt_url?: string;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  patient?: Patient;
+  appointment?: Appointment;
 }
