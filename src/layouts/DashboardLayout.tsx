@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Logo } from "@/components/ui/Logo";
@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   CalendarPlus,
   DollarSign,
+  UserCog,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,21 +26,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiresRole?: "medico" | "asistente";
+}
+
+const allNavItems: NavItem[] = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/dashboard/calendario", label: "Calendario", icon: Calendar },
   { href: "/dashboard/citas", label: "Citas", icon: CalendarPlus },
   { href: "/dashboard/pacientes", label: "Pacientes", icon: Users },
   { href: "/dashboard/horarios", label: "Horarios", icon: Clock },
   { href: "/dashboard/ingresos", label: "Ingresos", icon: DollarSign },
-  { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
+  { href: "/dashboard/usuarios", label: "Usuarios", icon: UserCog, requiresRole: "medico" },
+  { href: "/dashboard/configuracion", label: "Configuración", icon: Settings, requiresRole: "medico" },
 ];
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { profile, roles, signOut } = useAuth();
+  const { profile, roles, signOut, hasRole } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Filter nav items based on user role
+  const navItems = useMemo(() => {
+    return allNavItems.filter((item) => {
+      if (!item.requiresRole) return true;
+      return hasRole(item.requiresRole);
+    });
+  }, [hasRole]);
 
   const handleSignOut = async () => {
     await signOut();

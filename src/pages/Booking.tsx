@@ -15,6 +15,7 @@ import { format, addDays, isBefore, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, Clock, User, Mail, Phone, FileText, Video, Building2, CheckCircle2, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import type { Doctor, Office, AppointmentType } from "@/lib/types";
+import { bookingSchema, validateForm } from "@/lib/validationSchemas";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -70,6 +71,18 @@ export default function Booking() {
   const handleSubmit = async () => {
     if (!selectedDoctor || !selectedDate || !selectedTime) return;
     
+    // Validate form data
+    const validation = validateForm(bookingSchema, formData);
+    if (validation.success === false) {
+      const firstError = Object.values(validation.errors)[0];
+      toast({
+        title: "Datos inválidos",
+        description: firstError,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSubmitting(true);
     try {
       const startTime = selectedTime;
@@ -78,23 +91,37 @@ export default function Booking() {
       endTimeDate.setHours(hours, minutes + duration, 0, 0);
       const endTime = format(endTimeDate, "HH:mm");
 
-      const { error } = await supabase.from("appointments").insert({
-        doctor_id: selectedDoctor.id,
-        office_id: selectedOffice || null,
-        patient_name: formData.patient_name,
-        patient_email: formData.patient_email,
-        patient_phone: formData.patient_phone,
-        reason: formData.reason,
-        notes: formData.notes || null,
-        appointment_date: format(selectedDate, "yyyy-MM-dd"),
-        start_time: startTime,
-        end_time: endTime,
-        duration,
-        type: appointmentType,
-        status: "pendiente",
-      });
+      // Use edge function for secure appointment creation with rate limiting
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-appointment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            doctor_id: selectedDoctor.id,
+            office_id: selectedOffice || null,
+            patient_name: formData.patient_name.trim(),
+            patient_email: formData.patient_email.trim().toLowerCase(),
+            patient_phone: formData.patient_phone.trim(),
+            reason: formData.reason.trim(),
+            notes: formData.notes?.trim() || null,
+            appointment_date: format(selectedDate, "yyyy-MM-dd"),
+            start_time: startTime,
+            end_time: endTime,
+            duration,
+            type: appointmentType,
+          }),
+        }
+      );
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al crear la cita");
+      }
 
       setSubmitted(true);
       toast({
