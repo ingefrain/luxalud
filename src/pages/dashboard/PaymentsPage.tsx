@@ -37,7 +37,6 @@ import {
   DollarSign,
   Receipt,
   Loader2,
-  Eye,
   FileText,
   CreditCard,
   Banknote,
@@ -46,6 +45,7 @@ import {
   Upload,
 } from "lucide-react";
 import type { Payment, Patient, PaymentMethod } from "@/lib/types";
+import { SecureFileLink } from "@/components/dashboard/SecureFileLink";
 
 export default function PaymentsPage() {
   const [search, setSearch] = useState("");
@@ -95,24 +95,21 @@ export default function PaymentsPage() {
   // Create payment mutation
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
-      let receiptUrl = null;
+      let receiptPath = null;
 
       // Upload receipt if selected
       if (selectedFile) {
         const fileExt = selectedFile.name.split(".").pop();
-        const fileName = `${formData.patient_id}/${Date.now()}.${fileExt}`;
+        const filePath = `${formData.patient_id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from("payment-receipts")
-          .upload(fileName, selectedFile);
+          .upload(filePath, selectedFile);
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("payment-receipts")
-          .getPublicUrl(fileName);
-
-        receiptUrl = urlData.publicUrl;
+        // Store path, not public URL - signed URLs generated on-demand
+        receiptPath = filePath;
       }
 
       const { error } = await supabase.from("payments").insert({
@@ -123,7 +120,7 @@ export default function PaymentsPage() {
         payment_date: formData.payment_date,
         reference: formData.reference || null,
         notes: formData.notes || null,
-        receipt_url: receiptUrl,
+        receipt_url: receiptPath, // Store path for secure access
       });
 
       if (error) throw error;
@@ -332,11 +329,12 @@ export default function PaymentsPage() {
                     </TableCell>
                     <TableCell>
                       {payment.receipt_url ? (
-                        <Button variant="ghost" size="icon" asChild>
-                          <a href={payment.receipt_url} target="_blank" rel="noopener noreferrer">
-                            <Eye className="h-4 w-4" />
-                          </a>
-                        </Button>
+                        <SecureFileLink
+                          bucket="payment-receipts"
+                          filePath={payment.receipt_url}
+                          fileName={`comprobante-${payment.id.slice(0, 8)}.pdf`}
+                          action="view"
+                        />
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

@@ -184,6 +184,7 @@ export type Database = {
           created_at: string
           description: string | null
           file_name: string
+          file_path: string | null
           file_size: number | null
           file_type: string
           file_url: string
@@ -195,6 +196,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           file_name: string
+          file_path?: string | null
           file_size?: number | null
           file_type: string
           file_url: string
@@ -206,6 +208,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           file_name?: string
+          file_path?: string | null
           file_size?: number | null
           file_type?: string
           file_url?: string
@@ -268,11 +271,13 @@ export type Database = {
           appointment_id: string | null
           created_at: string
           created_by: string | null
+          doctor_id: string | null
           id: string
           notes: string | null
           patient_id: string
           payment_date: string
           payment_method: Database["public"]["Enums"]["payment_method"]
+          receipt_path: string | null
           receipt_url: string | null
           reference: string | null
           updated_at: string
@@ -282,11 +287,13 @@ export type Database = {
           appointment_id?: string | null
           created_at?: string
           created_by?: string | null
+          doctor_id?: string | null
           id?: string
           notes?: string | null
           patient_id: string
           payment_date?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          receipt_path?: string | null
           receipt_url?: string | null
           reference?: string | null
           updated_at?: string
@@ -296,11 +303,13 @@ export type Database = {
           appointment_id?: string | null
           created_at?: string
           created_by?: string | null
+          doctor_id?: string | null
           id?: string
           notes?: string | null
           patient_id?: string
           payment_date?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          receipt_path?: string | null
           receipt_url?: string | null
           reference?: string | null
           updated_at?: string
@@ -311,6 +320,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
           {
@@ -468,6 +484,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_doctor_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
