@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -21,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -34,14 +32,13 @@ import {
   Calendar,
   FileText,
   Upload,
-  Download,
   Trash2,
   Loader2,
-  Eye,
   File,
   Image as ImageIcon,
 } from "lucide-react";
 import type { Patient, PatientFile, Appointment } from "@/lib/types";
+import { SecureFileLink } from "@/components/dashboard/SecureFileLink";
 
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,24 +99,20 @@ export default function PatientDetailPage() {
   const uploadFileMutation = useMutation({
     mutationFn: async ({ file, description }: { file: File; description: string }) => {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${id}/${Date.now()}.${fileExt}`;
+      const filePath = `${id}/${Date.now()}.${fileExt}`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from("patient-files")
-        .upload(fileName, file);
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("patient-files")
-        .getPublicUrl(fileName);
-
-      // Save file record
+      // Save file record with PATH (not public URL) for security
+      // Signed URLs will be generated on-demand when viewing files
       const { error: dbError } = await supabase.from("patient_files").insert({
         patient_id: id,
-        file_url: urlData.publicUrl,
+        file_url: filePath, // Store path, not URL
         file_name: file.name,
         file_type: file.type,
         file_size: file.size,
@@ -370,24 +363,18 @@ export default function PatientDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    asChild
-                  >
-                    <a href={file.file_url} target="_blank" rel="noopener noreferrer">
-                      <Eye className="h-4 w-4" />
-                    </a>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    asChild
-                  >
-                    <a href={file.file_url} download={file.file_name}>
-                      <Download className="h-4 w-4" />
-                    </a>
-                  </Button>
+                  <SecureFileLink
+                    bucket="patient-files"
+                    filePath={file.file_url}
+                    fileName={file.file_name}
+                    action="view"
+                  />
+                  <SecureFileLink
+                    bucket="patient-files"
+                    filePath={file.file_url}
+                    fileName={file.file_name}
+                    action="download"
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
