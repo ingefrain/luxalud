@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Search, User, Mail, Phone, Calendar, Plus, Eye, Loader2 } from "lucide-react";
 import type { Patient } from "@/lib/types";
+import { patientSchema, validateForm } from "@/lib/validationSchemas";
 
 export default function PatientsPage() {
   const [search, setSearch] = useState("");
@@ -120,14 +121,26 @@ export default function PatientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.full_name || !formData.email || !formData.phone) {
+    
+    // Validate form data
+    const validation = validateForm(patientSchema, {
+      ...formData,
+      gender: formData.gender || null,
+      date_of_birth: formData.date_of_birth || null,
+      address: formData.address || null,
+      notes: formData.notes || null,
+    });
+    
+    if (validation.success === false) {
+      const firstError = Object.values(validation.errors)[0];
       toast({
-        title: "Campos requeridos",
-        description: "Nombre, email y teléfono son obligatorios",
+        title: "Datos inválidos",
+        description: firstError,
         variant: "destructive",
       });
       return;
     }
+    
     setSaving(true);
     await createPatientMutation.mutateAsync();
     setSaving(false);
