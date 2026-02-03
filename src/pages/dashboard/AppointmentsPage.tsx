@@ -101,6 +101,21 @@ export default function AppointmentsPage() {
     apt.patient_email.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Agrupar citas por doctor
+  const appointmentsByDoctor = filteredAppointments.reduce((acc, apt) => {
+    const doctorId = apt.doctor_id;
+    const doctorName = apt.doctor?.full_name || "Sin asignar";
+    
+    if (!acc[doctorId]) {
+      acc[doctorId] = {
+        doctorName,
+        appointments: []
+      };
+    }
+    acc[doctorId].appointments.push(apt);
+    return acc;
+  }, {} as Record<string, { doctorName: string; appointments: typeof filteredAppointments }>);
+
   const statusColors: Record<string, string> = {
     pendiente: "bg-warning/10 text-warning border-warning/20",
     confirmada: "bg-success/10 text-success border-success/20",
@@ -182,97 +197,100 @@ export default function AppointmentsPage() {
         </Popover>
       </div>
 
-      {/* Table */}
-      <div className="flux-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Paciente</TableHead>
-              <TableHead>Médico</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Hora</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAppointments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                  No se encontraron citas
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredAppointments.map((apt) => {
-                const StatusIcon = statusIcons[apt.status];
-                return (
-                  <TableRow key={apt.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{apt.patient_name}</p>
-                        <p className="text-sm text-muted-foreground">{apt.patient_email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {apt.doctor?.full_name || "Sin asignar"}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(apt.appointment_date), "dd/MM/yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      {apt.start_time.slice(0, 5)} - {apt.end_time.slice(0, 5)}
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {apt.type}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-                          statusColors[apt.status]
-                        }`}
-                      >
-                        <StatusIcon className="h-3 w-3" />
-                        {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => updateStatus.mutate({ id: apt.id, status: "confirmada" })}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2 text-success" />
-                            Confirmar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateStatus.mutate({ id: apt.id, status: "completada" })}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2 text-muted-foreground" />
-                            Marcar completada
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateStatus.mutate({ id: apt.id, status: "cancelada" })}
-                            className="text-destructive"
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Cancelar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+      {/* Citas agrupadas por doctor */}
+      {Object.keys(appointmentsByDoctor).length === 0 ? (
+        <div className="flux-card p-12 text-center text-muted-foreground">
+          <CalendarIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <p>No hay citas registradas</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(appointmentsByDoctor).map(([doctorId, { doctorName, appointments: doctorAppointments }]) => (
+            <div key={doctorId} className="flux-card overflow-hidden">
+              <div className="bg-muted/50 px-4 py-3 border-b border-border">
+                <h3 className="font-semibold text-foreground">{doctorName}</h3>
+                <p className="text-sm text-muted-foreground">{doctorAppointments.length} cita(s)</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Hora</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                </TableHeader>
+                <TableBody>
+                  {doctorAppointments.map((apt) => {
+                    const StatusIcon = statusIcons[apt.status];
+                    return (
+                      <TableRow key={apt.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{apt.patient_name}</p>
+                            <p className="text-sm text-muted-foreground">{apt.patient_email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(apt.appointment_date), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {apt.start_time.slice(0, 5)} - {apt.end_time.slice(0, 5)}
+                        </TableCell>
+                        <TableCell className="capitalize">
+                          {apt.type}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
+                              statusColors[apt.status]
+                            }`}
+                          >
+                            <StatusIcon className="h-3 w-3" />
+                            {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => updateStatus.mutate({ id: apt.id, status: "confirmada" })}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2 text-success" />
+                                Confirmar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatus.mutate({ id: apt.id, status: "completada" })}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2 text-muted-foreground" />
+                                Marcar completada
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatus.mutate({ id: apt.id, status: "cancelada" })}
+                                className="text-destructive"
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancelar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
