@@ -73,7 +73,7 @@ export interface Appointment {
   patient?: Patient;
 }
 
-export type AppRole = 'medico' | 'asistente';
+export type AppRole = 'medico' | 'asistente' | 'admin';
 
 export interface UserRole {
   id: string;
@@ -81,6 +81,14 @@ export interface UserRole {
   role: AppRole;
   doctor_id?: string;
   created_at: string;
+}
+
+export interface UserDoctorAssignment {
+  id: string;
+  user_id: string;
+  doctor_id: string;
+  created_at: string;
+  created_by?: string;
 }
 
 export interface Profile {

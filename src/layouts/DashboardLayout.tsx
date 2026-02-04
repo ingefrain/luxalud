@@ -30,7 +30,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  requiresRole?: "medico" | "asistente";
+  requiresRole?: ("medico" | "admin")[];
 }
 
 const allNavItems: NavItem[] = [
@@ -40,8 +40,9 @@ const allNavItems: NavItem[] = [
   { href: "/dashboard/pacientes", label: "Pacientes", icon: Users },
   { href: "/dashboard/horarios", label: "Horarios", icon: Clock },
   { href: "/dashboard/ingresos", label: "Ingresos", icon: DollarSign },
-  { href: "/dashboard/usuarios", label: "Usuarios", icon: UserCog, requiresRole: "medico" },
-  { href: "/dashboard/configuracion", label: "Configuración", icon: Settings, requiresRole: "medico" },
+  { href: "/dashboard/usuarios", label: "Usuarios", icon: UserCog, requiresRole: ["medico", "admin"] },
+  { href: "/dashboard/asignaciones", label: "Asignaciones", icon: UserCog, requiresRole: ["medico", "admin"] },
+  { href: "/dashboard/configuracion", label: "Configuración", icon: Settings, requiresRole: ["medico", "admin"] },
 ];
 
 export function DashboardLayout() {
@@ -54,7 +55,7 @@ export function DashboardLayout() {
   const navItems = useMemo(() => {
     return allNavItems.filter((item) => {
       if (!item.requiresRole) return true;
-      return hasRole(item.requiresRole);
+      return item.requiresRole.some((role) => hasRole(role));
     });
   }, [hasRole]);
 

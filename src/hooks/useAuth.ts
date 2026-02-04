@@ -76,7 +76,7 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const hasRole = (role: AppRole) => state.roles.includes(role);
+  const hasRole = (role: AppRole | "admin") => state.roles.includes(role as AppRole);
 
   const signOut = async () => {
     await supabase.auth.signOut();

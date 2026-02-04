@@ -447,6 +447,38 @@ export type Database = {
           },
         ]
       }
+      user_doctor_assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          doctor_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          doctor_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          doctor_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_doctor_assignments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -485,6 +517,7 @@ export type Database = {
     }
     Functions: {
       get_user_doctor_id: { Args: never; Returns: string }
+      get_user_doctor_ids: { Args: never; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
