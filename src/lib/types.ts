@@ -130,8 +130,10 @@ export interface Patient {
   gender?: string;
   address?: string;
   notes?: string;
+  doctor_id?: string;
   created_at: string;
   updated_at: string;
+  doctor?: Doctor;
 }
 
 export interface PatientFile {

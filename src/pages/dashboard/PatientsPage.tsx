@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -25,8 +32,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Search, User, Mail, Phone, Calendar, Plus, Eye, Loader2 } from "lucide-react";
-import type { Patient } from "@/lib/types";
+import { Search, User, Mail, Phone, Calendar, Plus, Eye, Loader2, Stethoscope } from "lucide-react";
+import type { Patient, Doctor } from "@/lib/types";
 import { patientSchema, validateForm } from "@/lib/validationSchemas";
 
 export default function PatientsPage() {
@@ -44,18 +51,33 @@ export default function PatientsPage() {
     gender: "",
     address: "",
     notes: "",
+    doctor_id: "",
   });
 
-  // Fetch patients
+  // Fetch patients with doctor info
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ["patients"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
-        .select("*")
+        .select("*, doctor:doctors(*)")
         .order("full_name");
       if (error) throw error;
-      return data as Patient[];
+      return data as (Patient & { doctor: Doctor | null })[];
+    },
+  });
+
+  // Fetch doctors for select
+  const { data: doctors = [] } = useQuery({
+    queryKey: ["doctors-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("*")
+        .eq("is_active", true)
+        .order("full_name");
+      if (error) throw error;
+      return data as Doctor[];
     },
   });
 
@@ -89,6 +111,7 @@ export default function PatientsPage() {
         gender: formData.gender || null,
         address: formData.address || null,
         notes: formData.notes || null,
+        doctor_id: formData.doctor_id || null,
       });
       if (error) throw error;
     },
@@ -116,6 +139,7 @@ export default function PatientsPage() {
       gender: "",
       address: "",
       notes: "",
+      doctor_id: "",
     });
   };
 
@@ -194,6 +218,7 @@ export default function PatientsPage() {
               <TableRow>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Contacto</TableHead>
+                <TableHead>Médico Asignado</TableHead>
                 <TableHead>Citas</TableHead>
                 <TableHead>Registrado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -202,7 +227,7 @@ export default function PatientsPage() {
             <TableBody>
               {filteredPatients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>No se encontraron pacientes</p>
                   </TableCell>
@@ -229,6 +254,18 @@ export default function PatientsPage() {
                           {patient.phone}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {patient.doctor ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-info/10 text-info flex items-center justify-center text-xs">
+                            <Stethoscope className="h-3 w-3" />
+                          </div>
+                          <span className="text-sm">{patient.doctor.full_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Sin asignar</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
@@ -322,6 +359,24 @@ export default function PatientsPage() {
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="Calle, número, colonia, ciudad"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Médico Asignado</Label>
+              <Select
+                value={formData.doctor_id}
+                onValueChange={(v) => setFormData({ ...formData, doctor_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar médico" />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      {doctor.full_name} {doctor.specialty && `(${doctor.specialty})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Notas</Label>

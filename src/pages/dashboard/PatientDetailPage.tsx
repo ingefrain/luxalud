@@ -36,8 +36,9 @@ import {
   Loader2,
   File,
   Image as ImageIcon,
+  Stethoscope,
 } from "lucide-react";
-import type { Patient, PatientFile, Appointment } from "@/lib/types";
+import type { Patient, PatientFile, Appointment, Doctor } from "@/lib/types";
 import { SecureFileLink } from "@/components/dashboard/SecureFileLink";
 
 export default function PatientDetailPage() {
@@ -50,17 +51,17 @@ export default function PatientDetailPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Fetch patient details
+  // Fetch patient details with doctor
   const { data: patient, isLoading: loadingPatient } = useQuery({
     queryKey: ["patient", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
-        .select("*")
+        .select("*, doctor:doctors(*)")
         .eq("id", id)
         .single();
       if (error) throw error;
-      return data as Patient;
+      return data as Patient & { doctor: Doctor | null };
     },
     enabled: !!id,
   });
@@ -289,6 +290,20 @@ export default function PatientDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Género</p>
                 <p className="font-medium capitalize">{patient.gender}</p>
+              </div>
+            </div>
+          )}
+          {patient.doctor && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center text-info">
+                <Stethoscope className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Médico Asignado</p>
+                <p className="font-medium">{patient.doctor.full_name}</p>
+                {patient.doctor.specialty && (
+                  <p className="text-xs text-muted-foreground">{patient.doctor.specialty}</p>
+                )}
               </div>
             </div>
           )}

@@ -231,6 +231,7 @@ export type Database = {
           address: string | null
           created_at: string
           date_of_birth: string | null
+          doctor_id: string | null
           email: string
           full_name: string
           gender: string | null
@@ -243,6 +244,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           date_of_birth?: string | null
+          doctor_id?: string | null
           email: string
           full_name: string
           gender?: string | null
@@ -255,6 +257,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           date_of_birth?: string | null
+          doctor_id?: string | null
           email?: string
           full_name?: string
           gender?: string | null
@@ -263,7 +266,15 @@ export type Database = {
           phone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patients_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
