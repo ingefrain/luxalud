@@ -44,8 +44,9 @@ import {
   HelpCircle,
   Upload,
 } from "lucide-react";
-import type { Payment, Patient, PaymentMethod } from "@/lib/types";
+import type { Payment, Patient, PaymentMethod, Doctor } from "@/lib/types";
 import { SecureFileLink } from "@/components/dashboard/SecureFileLink";
+import { User } from "lucide-react";
 
 export default function PaymentsPage() {
   const [search, setSearch] = useState("");
@@ -59,6 +60,7 @@ export default function PaymentsPage() {
   const [formData, setFormData] = useState({
     patient_id: "",
     appointment_id: "",
+    doctor_id: "",
     amount: "",
     payment_method: "efectivo" as PaymentMethod,
     payment_date: format(new Date(), "yyyy-MM-dd"),
@@ -66,16 +68,16 @@ export default function PaymentsPage() {
     notes: "",
   });
 
-  // Fetch payments with patient info
+  // Fetch payments with patient and doctor info
   const { data: payments = [], isLoading: loadingPayments } = useQuery({
     queryKey: ["payments"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payments")
-        .select("*, patient:patients(*)")
+        .select("*, patient:patients(*), doctor:doctors(*)")
         .order("payment_date", { ascending: false });
       if (error) throw error;
-      return data as (Payment & { patient: Patient })[];
+      return data as (Payment & { patient: Patient; doctor: Doctor | null })[];
     },
   });
 
@@ -89,6 +91,20 @@ export default function PaymentsPage() {
         .order("full_name");
       if (error) throw error;
       return data as Patient[];
+    },
+  });
+
+  // Fetch doctors for select
+  const { data: doctors = [] } = useQuery({
+    queryKey: ["doctors-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("*")
+        .eq("is_active", true)
+        .order("full_name");
+      if (error) throw error;
+      return data as Doctor[];
     },
   });
 
@@ -114,6 +130,7 @@ export default function PaymentsPage() {
 
       const { error } = await supabase.from("payments").insert({
         patient_id: formData.patient_id,
+        doctor_id: formData.doctor_id || null,
         appointment_id: formData.appointment_id || null,
         amount: parseFloat(formData.amount),
         payment_method: formData.payment_method,
@@ -144,6 +161,7 @@ export default function PaymentsPage() {
     setFormData({
       patient_id: "",
       appointment_id: "",
+      doctor_id: "",
       amount: "",
       payment_method: "efectivo",
       payment_date: format(new Date(), "yyyy-MM-dd"),
@@ -287,6 +305,7 @@ export default function PaymentsPage() {
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Paciente</TableHead>
+                <TableHead>Médico</TableHead>
                 <TableHead>Monto</TableHead>
                 <TableHead>Método</TableHead>
                 <TableHead>Referencia</TableHead>
@@ -296,7 +315,7 @@ export default function PaymentsPage() {
             <TableBody>
               {filteredPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>No hay pagos registrados</p>
                   </TableCell>
@@ -314,6 +333,18 @@ export default function PaymentsPage() {
                         </div>
                         <span className="font-medium">{payment.patient?.full_name}</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {payment.doctor ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-info/10 text-info flex items-center justify-center text-xs font-semibold">
+                            {payment.doctor.full_name.charAt(0)}
+                          </div>
+                          <span className="text-sm">{payment.doctor.full_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="font-semibold text-success">
                       ${Number(payment.amount).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
@@ -368,6 +399,25 @@ export default function PaymentsPage() {
                   {patients.map((patient) => (
                     <SelectItem key={patient.id} value={patient.id}>
                       {patient.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Médico que recibe el pago</Label>
+              <Select
+                value={formData.doctor_id}
+                onValueChange={(v) => setFormData({ ...formData, doctor_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar médico" />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      {doctor.full_name} {doctor.specialty && `(${doctor.specialty})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
