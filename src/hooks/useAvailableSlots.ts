@@ -114,6 +114,10 @@ export function useAvailableSlots({ doctorId, date, duration }: UseAvailableSlot
       const availableSlots = allSlots.filter((slot) => {
         if (occupiedSlots.has(slot)) return false;
         
+        // Only allow 30-minute interval slots (HH:00 or HH:30)
+        const [, minutes] = slot.split(":").map(Number);
+        if (minutes !== 0 && minutes !== 30) return false;
+        
         if (isToday) {
           const slotTime = parse(slot, "HH:mm", new Date());
           const slotDateTime = new Date(date);
