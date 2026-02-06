@@ -13,11 +13,12 @@ import { Header } from "@/components/public/Header";
 import { Footer } from "@/components/public/Footer";
 import { format, addDays, isBefore, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, User, Mail, Phone, FileText, Video, Building2, CheckCircle2, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
-import type { Doctor, Office, AppointmentType } from "@/lib/types";
+import { Calendar as CalendarIcon, Clock, User, Mail, Phone, FileText, Video, Building2, CheckCircle2, ArrowLeft, ArrowRight, Loader2, Search, UserPlus, UserCheck } from "lucide-react";
+import type { Doctor, Office, AppointmentType, Patient } from "@/lib/types";
 import { bookingSchema, validateForm } from "@/lib/validationSchemas";
 
 type Step = 1 | 2 | 3 | 4;
+type PatientType = "new" | "existing";
 
 export default function Booking() {
   const [step, setStep] = useState<Step>(1);
@@ -27,6 +28,13 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [appointmentType, setAppointmentType] = useState<AppointmentType>("presencial");
   const [duration, setDuration] = useState(30);
+  
+  // Patient type selection
+  const [patientType, setPatientType] = useState<PatientType>("new");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchingPatient, setSearchingPatient] = useState(false);
+  const [foundPatient, setFoundPatient] = useState<Patient | null>(null);
+  
   const [formData, setFormData] = useState({
     patient_name: "",
     patient_email: "",
@@ -67,6 +75,81 @@ export default function Booking() {
     date: selectedDate,
     duration,
   });
+
+  // Handle patient type change
+  const handlePatientTypeChange = (type: PatientType) => {
+    setPatientType(type);
+    setSearchQuery("");
+    setFoundPatient(null);
+    // Reset form data when switching types to avoid stale data
+    setFormData({
+      patient_name: "",
+      patient_email: "",
+      patient_phone: "",
+      reason: formData.reason, // Keep reason as it's appointment-specific
+      notes: formData.notes,   // Keep notes as it's appointment-specific
+    });
+  };
+
+  // Search for existing patient
+  const handleSearchPatient = async () => {
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Campo vacío",
+        description: "Ingresa un correo electrónico o número de teléfono para buscar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSearchingPatient(true);
+    setFoundPatient(null);
+
+    try {
+      // Normalize the search query
+      const normalizedQuery = searchQuery.trim().toLowerCase();
+      const phoneQuery = searchQuery.replace(/\D/g, ""); // Remove non-digits for phone search
+
+      // Search by email or phone
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .or(`email.ilike.${normalizedQuery},phone.ilike.%${phoneQuery}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setFoundPatient(data as Patient);
+        setFormData({
+          patient_name: data.full_name,
+          patient_email: data.email,
+          patient_phone: data.phone,
+          reason: formData.reason,
+          notes: formData.notes,
+        });
+        toast({
+          title: "Paciente encontrado",
+          description: `Se encontró a ${data.full_name}`,
+        });
+      } else {
+        toast({
+          title: "Paciente no encontrado",
+          description: "No se encontró ningún paciente con ese correo o teléfono. Puedes registrarte como paciente nuevo.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error en la búsqueda",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSearchingPatient(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!selectedDoctor || !selectedDate || !selectedTime) return;
@@ -415,76 +498,155 @@ export default function Booking() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-primary" />
-                      Nombre completo *
-                    </Label>
-                    <Input
-                      id="name"
-                      value={formData.patient_name}
-                      onChange={(e) => setFormData({ ...formData, patient_name: e.target.value })}
-                      placeholder="Tu nombre completo"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-primary" />
-                      Teléfono *
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.patient_phone}
-                      onChange={(e) => setFormData({ ...formData, patient_phone: e.target.value })}
-                      placeholder="+52 55 1234 5678"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="email" className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-primary" />
-                      Correo electrónico *
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.patient_email}
-                      onChange={(e) => setFormData({ ...formData, patient_email: e.target.value })}
-                      placeholder="tu@email.com"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="reason" className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-primary" />
-                      Motivo de la consulta *
-                    </Label>
-                    <Input
-                      id="reason"
-                      value={formData.reason}
-                      onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                      placeholder="Describe brevemente el motivo de tu visita"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="notes">Notas adicionales (opcional)</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Información adicional que consideres relevante..."
-                      rows={3}
-                    />
+                {/* Patient Type Selector */}
+                <div className="mb-6">
+                  <Label className="mb-3 block">¿Eres paciente nuevo o ya estás registrado?</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handlePatientTypeChange("new")}
+                      className={`p-4 rounded-lg border-2 flex items-center gap-3 transition-all ${
+                        patientType === "new"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <UserPlus className="h-5 w-5 text-primary" />
+                      <div className="text-left">
+                        <span className="font-medium block">Paciente nuevo</span>
+                        <span className="text-xs text-muted-foreground">Primera vez en la clínica</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handlePatientTypeChange("existing")}
+                      className={`p-4 rounded-lg border-2 flex items-center gap-3 transition-all ${
+                        patientType === "existing"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <UserCheck className="h-5 w-5 text-primary" />
+                      <div className="text-left">
+                        <span className="font-medium block">Ya estoy registrado</span>
+                        <span className="text-xs text-muted-foreground">He tenido citas antes</span>
+                      </div>
+                    </button>
                   </div>
                 </div>
+
+                {/* Existing Patient Search */}
+                {patientType === "existing" && (
+                  <div className="flux-card bg-muted/30 p-4 space-y-4">
+                    <Label className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-primary" />
+                      Buscar mi registro
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Correo electrónico o teléfono"
+                        onKeyDown={(e) => e.key === "Enter" && handleSearchPatient()}
+                      />
+                      <Button 
+                        onClick={handleSearchPatient} 
+                        disabled={searchingPatient}
+                        className="shrink-0"
+                      >
+                        {searchingPatient ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                    {foundPatient && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-success/10 border border-success/30">
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                        <div>
+                          <p className="font-medium text-foreground">{foundPatient.full_name}</p>
+                          <p className="text-sm text-muted-foreground">{foundPatient.email}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Patient Form - Show for new patients OR after finding existing patient */}
+                {(patientType === "new" || foundPatient) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-primary" />
+                        Nombre completo *
+                      </Label>
+                      <Input
+                        id="name"
+                        value={formData.patient_name}
+                        onChange={(e) => setFormData({ ...formData, patient_name: e.target.value })}
+                        placeholder="Tu nombre completo"
+                        required
+                        disabled={patientType === "existing" && !!foundPatient}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-primary" />
+                        Teléfono *
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.patient_phone}
+                        onChange={(e) => setFormData({ ...formData, patient_phone: e.target.value })}
+                        placeholder="+52 55 1234 5678"
+                        required
+                        disabled={patientType === "existing" && !!foundPatient}
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="email" className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        Correo electrónico *
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.patient_email}
+                        onChange={(e) => setFormData({ ...formData, patient_email: e.target.value })}
+                        placeholder="tu@email.com"
+                        required
+                        disabled={patientType === "existing" && !!foundPatient}
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="reason" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-primary" />
+                        Motivo de la consulta *
+                      </Label>
+                      <Input
+                        id="reason"
+                        value={formData.reason}
+                        onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                        placeholder="Describe brevemente el motivo de tu visita"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="notes">Notas adicionales (opcional)</Label>
+                      <Textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        placeholder="Información adicional que consideres relevante..."
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-between pt-4">
                   <Button variant="outline" onClick={() => setStep(2)} className="gap-2">
@@ -493,7 +655,13 @@ export default function Booking() {
                   </Button>
                   <Button
                     onClick={() => setStep(4)}
-                    disabled={!formData.patient_name || !formData.patient_email || !formData.patient_phone || !formData.reason}
+                    disabled={
+                      !formData.patient_name || 
+                      !formData.patient_email || 
+                      !formData.patient_phone || 
+                      !formData.reason ||
+                      (patientType === "existing" && !foundPatient)
+                    }
                     className="gap-2 flux-gradient-primary text-primary-foreground border-0"
                   >
                     Revisar Cita
