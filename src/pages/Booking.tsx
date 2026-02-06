@@ -348,9 +348,7 @@ export default function Booking() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="15">15 minutos</SelectItem>
                           <SelectItem value="30">30 minutos</SelectItem>
-                          <SelectItem value="45">45 minutos</SelectItem>
                           <SelectItem value="60">60 minutos</SelectItem>
                         </SelectContent>
                       </Select>
